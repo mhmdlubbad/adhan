@@ -201,7 +201,13 @@ def main() -> int:
     with JSON_FILE.open("w") as f:
         json.dump(merged, f, indent=2)
     write_csv(merged)
-    print(f"wrote {len(merged)} days to {JSON_FILE.name} and {CSV_FILE.name}")
+    # Also write a date-keyed version for the iOS Shortcut (so it can look up
+    # today's prayers with a single Dictionary Value action, no loops).
+    by_date = {d["date"]: d["prayer_times"] for d in merged}
+    by_date_path = ROOT / "prayer_times_by_date.json"
+    with by_date_path.open("w") as f:
+        json.dump(by_date, f, indent=2)
+    print(f"wrote {len(merged)} days to {JSON_FILE.name}, {CSV_FILE.name}, {by_date_path.name}")
 
     signal_running_service()
     return 0
