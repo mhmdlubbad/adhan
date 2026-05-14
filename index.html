@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="الأذان" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>مواقيت الصلاة — Tower Hamlets</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --muted: #6e6e73;
+      --accent: #1d8a4f;
+      --accent-soft: #1d8a4f1a;
+      --separator: #00000010;
+      --shadow: 0 2px 12px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --card: #1c1c1e;
+        --text: #f5f5f7;
+        --muted: #98989f;
+        --accent: #30d158;
+        --accent-soft: #30d15822;
+        --separator: #ffffff14;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      padding: env(safe-area-inset-top, 0) 16px env(safe-area-inset-bottom, 0);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    header {
+      padding: 32px 4px 24px;
+      text-align: center;
+    }
+    .date-greg {
+      font-size: 17px;
+      color: var(--muted);
+      letter-spacing: 0.2px;
+    }
+    .date-day {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: -0.4px;
+    }
+    .countdown-card {
+      background: var(--accent-soft);
+      border-radius: 18px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 16px;
+      transition: opacity .3s;
+    }
+    .countdown-label {
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .countdown-prayer {
+      font-size: 32px;
+      font-weight: 700;
+      margin-top: 6px;
+      color: var(--accent);
+    }
+    .countdown-time {
+      font-size: 17px;
+      color: var(--text);
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .prayers {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .prayer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--separator);
+      transition: background .2s;
+    }
+    .prayer:last-child { border-bottom: none; }
+    .prayer.next { background: var(--accent-soft); }
+    .prayer.past { opacity: 0.45; }
+    .prayer-name {
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .prayer-time {
+      font-size: 17px;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      letter-spacing: 0.4px;
+    }
+    .prayer.next .prayer-name,
+    .prayer.next .prayer-time {
+      color: var(--accent);
+    }
+    .play-btn {
+      width: 100%;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 600;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s, transform .1s;
+      margin-bottom: 12px;
+    }
+    .play-btn:active { transform: scale(0.98); opacity: 0.85; }
+    .play-btn.playing { background: var(--muted); }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 20px 0 32px;
+    }
+    .footer a { color: var(--muted); text-decoration: none; }
+    .error {
+      background: #ff453a22;
+      color: #ff453a;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="date-greg" id="date-greg">—</div>
+    <div class="date-day" id="date-day">جاري التحميل…</div>
+  </header>
+
+  <div class="countdown-card" id="countdown-card" style="display:none;">
+    <div class="countdown-label">الصلاة القادمة</div>
+    <div class="countdown-prayer" id="countdown-prayer">—</div>
+    <div class="countdown-time" id="countdown-time">—</div>
+  </div>
+
+  <div class="prayers" id="prayers"></div>
+
+  <button class="play-btn" id="play-btn">تشغيل الأذان</button>
+
+  <div id="error" class="error" style="display:none;"></div>
+
+  <div class="footer">
+    Tower Hamlets · <a href="prayer_times.json">JSON</a> · <a href="prayer_times.csv">CSV</a>
+  </div>
+
+  <audio id="audio" src="adhan.mp3" preload="none"></audio>
+
+  <script>
+    const PRAYERS_AR = {
+      Fajr: 'الفجر', Zuhr: 'الظهر', Asr: 'العصر',
+      Maghrib: 'المغرب', Isha: 'العشاء'
+    };
+    const PRAYER_KEYS = ['Fajr', 'Zuhr', 'Asr', 'Maghrib', 'Isha'];
+
+    const $ = (id) => document.getElementById(id);
+
+    function showError(msg) {
+      const e = $('error');
+      e.textContent = msg;
+      e.style.display = 'block';
+    }
+
+    function todayStr() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatGregorian() {
+      const d = new Date();
+      return d.toLocaleDateString('ar', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      });
+    }
+
+    function parsePrayerDate(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
+
+    function formatDelta(ms) {
+      if (ms < 0) ms = 0;
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
+      return `${pad(m)}:${pad(s)}`;
+    }
+
+    function render(times) {
+      const now = new Date();
+      const container = $('prayers');
+      container.innerHTML = '';
+
+      // find next prayer
+      let nextIdx = -1;
+      const parsedTimes = PRAYER_KEYS.map(k => parsePrayerDate(times[k]));
+      for (let i = 0; i < parsedTimes.length; i++) {
+        if (parsedTimes[i] > now) { nextIdx = i; break; }
+      }
+
+      PRAYER_KEYS.forEach((key, i) => {
+        const row = document.createElement('div');
+        row.className = 'prayer';
+        if (i === nextIdx) row.classList.add('next');
+        else if (i < nextIdx || nextIdx === -1) row.classList.add('past');
+        row.innerHTML = `
+          <span class="prayer-name">${PRAYERS_AR[key]}</span>
+          <span class="prayer-time">${times[key]}</span>
+        `;
+        container.appendChild(row);
+      });
+
+      // countdown
+      const card = $('countdown-card');
+      if (nextIdx >= 0) {
+        card.style.display = 'block';
+        $('countdown-prayer').textContent = PRAYERS_AR[PRAYER_KEYS[nextIdx]];
+        function tick() {
+          const diff = parsedTimes[nextIdx] - new Date();
+          if (diff < 0) { location.reload(); return; }
+          $('countdown-time').textContent = `بعد ${formatDelta(diff)} · الساعة ${times[PRAYER_KEYS[nextIdx]]}`;
+        }
+        tick();
+        setInterval(tick, 1000);
+      } else {
+        card.style.display = 'none';
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('prayer_times.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const today = todayStr();
+        const todayEntry = data.find(d => d.date === today);
+        if (!todayEntry) {
+          showError(`لا توجد بيانات لتاريخ ${today}. آخر يوم في البيانات: ${data[data.length-1].date}`);
+          return;
+        }
+        $('date-greg').textContent = formatGregorian();
+        $('date-day').textContent = todayEntry.date;
+        render(todayEntry.prayer_times);
+      } catch (e) {
+        showError(`خطأ في تحميل البيانات: ${e.message}`);
+      }
+    }
+
+    // play button
+    const audio = $('audio');
+    const btn = $('play-btn');
+    btn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.currentTime = 0;
+        audio.play();
+        btn.textContent = 'إيقاف';
+        btn.classList.add('playing');
+      } else {
+        audio.pause();
+        btn.textContent = 'تشغيل الأذان';
+        btn.classList.remove('playing');
+      }
+    });
+    audio.addEventListener('ended', () => {
+      btn.textContent = 'تشغيل الأذان';
+      btn.classList.remove('playing');
+    });
+
+    load();
+  </script>
+</body>
+</html>
